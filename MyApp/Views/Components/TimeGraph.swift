@@ -179,38 +179,69 @@ struct TimeGraph: View {
         var rule = Path()
         rule.move(to: CGPoint(x: sx, y: 0))
         rule.addLine(to: CGPoint(x: sx, y: size.height))
-        gc.stroke(rule, with: .color(Color.primary.opacity(0.3)), lineWidth: 1)
+        gc.stroke(rule, with: .color(Color.primary.opacity(0.22)), lineWidth: 1)
 
-        var parts: [String] = []
+        // One marker per series, then labels at each point's height.
+        struct Mark { var y: CGFloat; var color: Color; var text: String }
+        var marks: [Mark] = []
         for item in series {
             guard let v = item.value(sample) else { continue }
-            let point = CGPoint(x: sx, y: y(v))
-            let dot = Path(ellipseIn: CGRect(x: point.x - 3.5, y: point.y - 3.5, width: 7, height: 7))
+            let py = y(v)
             let dotColor = item.ramp.map { ramp in
                 ramp[Swift.min(ramp.count - 1, Int(Swift.min(Swift.max(v / maxValue, 0), 0.999) * Double(ramp.count)))]
             } ?? item.color ?? color
+            let dot = Path(ellipseIn: CGRect(x: sx - 3, y: py - 3, width: 6, height: 6))
             gc.fill(dot, with: .color(dotColor))
-            gc.stroke(dot, with: .color(Color(nsColor: .windowBackgroundColor)), lineWidth: 1.5)
-            let value = format(v)
-            parts.append(item.label.map { "\($0) \(value)" } ?? value)
+            marks.append(Mark(y: py, color: dotColor, text: format(v)))
         }
-        guard !parts.isEmpty else { return }
+        guard !marks.isEmpty else { return }
 
-        let clock = Date(timeIntervalSince1970: sample.t).formatted(date: .omitted, time: .standard)
-        let text = Text("\(Text(parts.joined(separator: "   ")).font(.callout.weight(.semibold)).monospacedDigit())\n\(Text(clock).font(.caption).foregroundStyle(.secondary).monospacedDigit())")
-        let resolved = gc.resolve(text)
-        let textSize = resolved.measure(in: CGSize(width: 320, height: 100))
-        let padding = CGSize(width: 8, height: 5)
-        let box = CGSize(width: textSize.width + padding.width * 2, height: textSize.height + padding.height * 2)
-        // Sit beside the cursor, flipping to the left near the right edge.
-        var origin = CGPoint(x: sx + 10, y: 8)
-        if origin.x + box.width > size.width - 4 { origin.x = sx - 10 - box.width }
-        origin.x = Swift.max(4, origin.x)
-        let rect = CGRect(origin: origin, size: box)
-        let bubble = Path(roundedRect: rect, cornerRadius: 7, style: .continuous)
-        gc.fill(bubble, with: .color(Color(nsColor: .windowBackgroundColor).opacity(0.94)))
-        gc.stroke(bubble, with: .color(Color.primary.opacity(0.12)), lineWidth: 1)
-        gc.draw(resolved, in: rect.insetBy(dx: padding.width, dy: padding.height))
+        // Labels closer than one label height are merged so they never overlap.
+        let labelHeight: CGFloat = 18
+        var clusters: [[Mark]] = []
+        for mark in marks.sorted(by: { $0.y < $1.y }) {
+            if let last = clusters.last?.last, mark.y - last.y < labelHeight + 2 {
+                clusters[clusters.count - 1].append(mark)
+            } else {
+                clusters.append([mark])
+            }
+        }
+
+        let multiple = marks.count > 1
+        for cluster in clusters {
+            let text = cluster.enumerated().reduce(Text(verbatim: "")) { partial, entry in
+                let (index, mark) = entry
+                let dot = multiple ? Text(verbatim: "● ").foregroundStyle(mark.color).font(.system(size: 7)) : Text(verbatim: "")
+                let gap = index > 0 ? Text(verbatim: "   ") : Text(verbatim: "")
+                return Text("\(partial)\(gap)\(dot)\(Text(mark.text).font(.caption.weight(.semibold)).monospacedDigit())")
+            }
+            let resolved = gc.resolve(text)
+            let textSize = resolved.measure(in: CGSize(width: 400, height: labelHeight))
+            let box = CGSize(width: textSize.width + 10, height: Swift.max(labelHeight, textSize.height + 4))
+            let centerY = cluster.reduce(0) { $0 + $1.y } / CGFloat(cluster.count)
+            var origin = CGPoint(x: sx + 7, y: centerY - box.height / 2)
+            // Flip to the left of the cursor near the right edge; stay inside the plot vertically.
+            if origin.x + box.width > size.width - 2 { origin.x = sx - 7 - box.width }
+            origin.x = Swift.max(2, origin.x)
+            origin.y = Swift.min(Swift.max(2, origin.y), size.height - box.height - 2)
+            let rect = CGRect(origin: origin, size: box)
+            let pill = Path(roundedRect: rect, cornerRadius: box.height / 2, style: .continuous)
+            gc.drawLayer { layer in
+                layer.addFilter(.shadow(color: .black.opacity(0.18), radius: 3, y: 1))
+                layer.fill(pill, with: .color(Color(nsColor: .windowBackgroundColor).opacity(0.9)))
+            }
+            gc.draw(resolved, at: CGPoint(x: rect.midX, y: rect.midY), anchor: .center)
+        }
+
+        // Longer ranges get a quiet relative time at the foot of the cursor.
+        if window > 90 {
+            let ago = Date().timeIntervalSince1970 - sample.t
+            let label = ago < 60 ? "\(Int(ago)) s ago" : "\(Int(ago / 60)) min ago"
+            let resolved = gc.resolve(Text(label).font(.caption2).foregroundStyle(.secondary))
+            let width = resolved.measure(in: size).width
+            let lx = sx + 5 + width > size.width ? sx - 5 - width / 2 : sx + 5 + width / 2
+            gc.draw(resolved, at: CGPoint(x: lx, y: size.height - 8), anchor: .center)
+        }
     }
 
     private func drawGrid(
@@ -319,7 +350,7 @@ private final class ScaleAnimator {
     private var from = 0.0
     private var to = 0.0
     private var start = 0.0
-    private let duration = 0.5
+    private let duration = 0.8
 
     func value(target: Double, at now: TimeInterval) -> Double {
         if to == 0 {
@@ -336,7 +367,8 @@ private final class ScaleAnimator {
 
     private func current(at now: TimeInterval) -> Double {
         let p = min(1, max(0, (now - start) / duration))
-        let eased = 1 - pow(1 - p, 3)
+        // Ease in and out so the line neither jerks away nor lands abruptly.
+        let eased = p < 0.5 ? 4 * p * p * p : 1 - pow(-2 * p + 2, 3) / 2
         return from + (to - from) * eased
     }
 }
