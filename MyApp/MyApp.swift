@@ -25,7 +25,7 @@ import SwiftUI
         .defaultSize(width: 1080, height: 760)
         .commands {
             SidebarCommands()
-            TimeRangeCommands()
+            ViewCommands(store: store)
         }
 
         MenuBarExtra(isInserted: $showMenuBar) {
@@ -51,12 +51,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 }
 
-/// View ▸ 1 min / 5 min / 1 hour (⌘1–⌘3).
-private struct TimeRangeCommands: Commands {
+/// View menu: freeze (Space) and time range (⌘1–⌘3).
+private struct ViewCommands: Commands {
+    var store: MetricsStore
     @AppStorage(PrefKey.range) private var range: TimeRange = .oneMinute
 
     var body: some Commands {
         CommandGroup(after: .sidebar) {
+            Divider()
+            Button(store.frozenAt == nil ? "Freeze Graphs" : "Resume Live Graphs") {
+                store.toggleFreeze()
+            }
+            .keyboardShortcut(.space, modifiers: [])
             Divider()
             Picker("Time Range", selection: $range) {
                 ForEach(Array(TimeRange.allCases.enumerated()), id: \.element) { index, range in

@@ -24,9 +24,18 @@ struct ContentView: View {
                     .transition(.opacity)
             }
             .animation(.easeInOut(duration: 0.18), value: current)
+            .overlay(alignment: .bottom) {
+                if store.frozenAt != nil {
+                    FrozenBadge()
+                        .padding(.bottom, 18)
+                        .transition(.scale(scale: 0.85).combined(with: .opacity))
+                }
+            }
+            .animation(.spring(duration: 0.3), value: store.frozenAt)
         }
         .frame(minWidth: 780, minHeight: 520)
         .environment(\.graphsPaused, !windowVisible)
+        .environment(\.frozenAt, store.frozenAt)
         .background(WindowVisibilityReader(isVisible: $windowVisible))
         .task { store.start() }
         // A removed device falls back to the overview instead of an empty pane.
@@ -55,6 +64,25 @@ struct ContentView: View {
         case .gpu(let id): info.gpus.contains { $0.id == id }
         }
         if !exists { storedPane = Pane.overview.storageKey }
+    }
+}
+
+/// Floating glass badge with a pulsing pause symbol while the display is frozen.
+private struct FrozenBadge: View {
+    var body: some View {
+        HStack(spacing: 7) {
+            Image(systemName: "pause.fill")
+                .symbolEffect(.pulse, options: .repeating)
+            Text("Frozen")
+                .fontWeight(.medium)
+            Text("Space to resume")
+                .foregroundStyle(.secondary)
+        }
+        .font(.callout)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .glassEffect()
+        .accessibilityElement(children: .combine)
     }
 }
 

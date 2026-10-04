@@ -3,6 +3,8 @@ import SwiftUI
 extension EnvironmentValues {
     /// Stops graph animation while the hosting window is fully hidden.
     @Entry var graphsPaused = false
+    /// When set, graphs render this moment instead of scrolling live.
+    @Entry var frozenAt: Date? = nil
 }
 
 /// One line in a `TimeGraph`.
@@ -56,6 +58,7 @@ struct TimeGraph: View {
     var adaptsToSelection = false
 
     @Environment(\.graphsPaused) private var paused
+    @Environment(\.frozenAt) private var frozenAt
     @Environment(\.backgroundProminence) private var prominence
     @State private var hover: CGPoint?
     @State private var scale = ScaleAnimator()
@@ -75,9 +78,10 @@ struct TimeGraph: View {
         let shape = RoundedRectangle(cornerRadius: framed ? cornerRadius : 0, style: .continuous)
         let emphasized = adaptsToSelection && prominence == .increased
         let graph = emphasized ? neutralCopy : self
-        TimelineView(.animation(minimumInterval: frameInterval, paused: paused)) { context in
+        let frozenAt = frozenAt
+        TimelineView(.animation(minimumInterval: frameInterval, paused: paused || frozenAt != nil)) { context in
             Canvas { gc, size in
-                let now = context.date.timeIntervalSince1970
+                let now = (frozenAt ?? context.date).timeIntervalSince1970
                 graph.draw(in: &gc, size: size, now: now - Self.displayDelay, max: scale.value(target: maxValue, at: now))
             }
         }
@@ -253,7 +257,7 @@ struct TimeGraph: View {
 
         // Longer ranges get a quiet relative time at the foot of the cursor.
         if window > 90 {
-            let ago = Date().timeIntervalSince1970 - sample.t
+            let ago = (frozenAt ?? Date()).timeIntervalSince1970 - sample.t
             let label = ago < 60 ? "\(Int(ago)) s ago" : "\(Int(ago / 60)) min ago"
             let resolved = gc.resolve(Text(label).font(.caption2).foregroundStyle(.secondary))
             let width = resolved.measure(in: size).width
@@ -437,7 +441,7 @@ nonisolated enum GraphMath {
         bytes: Bool = false,
         _ values: (Sample) -> [Double]
     ) -> Double {
-        let start = Date().timeIntervalSince1970 - window - 2
+        let start = (samples.last?.t ?? Date().timeIntervalSince1970) - window - 2
         var peak = 0.0
         for sample in samples.reversed() {
             if sample.t < start { break }
@@ -448,7 +452,7 @@ nonisolated enum GraphMath {
 
     /// Largest value in the visible window, or nil when there's no data.
     static func peak(_ samples: [Sample], window: TimeInterval, _ value: (Sample) -> Double?) -> Double? {
-        let start = Date().timeIntervalSince1970 - window - 2
+        let start = (samples.last?.t ?? Date().timeIntervalSince1970) - window - 2
         var peak: Double?
         for sample in samples.reversed() {
             if sample.t < start { break }

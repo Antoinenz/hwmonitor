@@ -9,9 +9,26 @@ final class MetricsStore {
     static let historyCapacity = 3600
 
     private(set) var info = SystemInfo()
-    private(set) var history: [Sample] = []
+    /// Collected samples; keeps growing while the display is frozen.
+    private var liveHistory: [Sample] = []
+    private var liveProcesses: [ProcessUsage] = []
+    private var frozen: (history: [Sample], processes: [ProcessUsage], at: Date)?
+
+    /// Samples to display: a snapshot while frozen, otherwise live.
+    var history: [Sample] { frozen?.history ?? liveHistory }
     /// Every process with its CPU and memory use, refreshed every 3 seconds.
-    private(set) var processes: [ProcessUsage] = []
+    var processes: [ProcessUsage] { frozen?.processes ?? liveProcesses }
+    /// When the display was frozen, or nil while live.
+    var frozenAt: Date? { frozen?.at }
+
+    /// Freezes every graph and value at this moment (sampling continues), or resumes live display.
+    func toggleFreeze() {
+        if frozen == nil {
+            frozen = (liveHistory, liveProcesses, Date())
+        } else {
+            frozen = nil
+        }
+    }
     /// True once disks, adapters and GPUs have been discovered, so panes can
     /// tell "still loading" apart from "device removed".
     private(set) var isReady = false
@@ -58,7 +75,7 @@ final class MetricsStore {
                 // `top` is the only unprivileged thread counter but it's costly; run it rarely.
                 let threads = tick % 5 == 0 ? CPUReader.processCounts().threads : nil
                 await collector.setProcessCounts(processes: processes.isEmpty ? nil : processes.count, threads: threads)
-                await MainActor.run { self.processes = processes }
+                await MainActor.run { self.liveProcesses = processes }
                 tick += 1
                 try? await Task.sleep(for: .seconds(3))
             }
@@ -84,7 +101,7 @@ final class MetricsStore {
             // Target the next whole second strictly after the previous sample. If the
             // timer fires a little early we sleep again rather than taking a second
             // sample milliseconds later (which made per-core deltas flip 0 ↔ 100%).
-            let last = history.last?.t ?? 0
+            let last = liveHistory.last?.t ?? 0
             var target = max(last + 1, Date().timeIntervalSince1970.rounded(.up))
             while true {
                 let wait = target - Date().timeIntervalSince1970
@@ -96,9 +113,9 @@ final class MetricsStore {
             let now = Date().timeIntervalSince1970
             if now - target > 0.5 { target = now.rounded(.down) }
             let sample = await collector.sample(at: target)
-            history.append(sample)
-            if history.count > Self.historyCapacity {
-                history.removeFirst(history.count - Self.historyCapacity)
+            liveHistory.append(sample)
+            if liveHistory.count > Self.historyCapacity {
+                liveHistory.removeFirst(liveHistory.count - Self.historyCapacity)
             }
         }
     }

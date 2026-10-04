@@ -105,6 +105,7 @@ struct MenuBarPanel: View {
         .padding(14)
         .frame(width: 320)
         .environment(\.graphsPaused, !visible)
+        .environment(\.frozenAt, store.frozenAt)
         .background(WindowVisibilityReader(isVisible: $visible))
     }
 
