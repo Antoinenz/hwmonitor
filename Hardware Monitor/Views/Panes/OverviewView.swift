@@ -254,10 +254,10 @@ private struct DashboardCard<Content: View>: View {
 
 private struct DashboardButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
-        Body(configuration: configuration)
+        StyledBody(configuration: configuration)
     }
 
-    private struct Body: View {
+    private struct StyledBody: View {
         let configuration: ButtonStyleConfiguration
         @State private var hovering = false
 
@@ -281,8 +281,8 @@ private struct PowerFlowCard: View {
     var action: () -> Void
 
     var body: some View {
-        let plugged = battery?.externalConnected ?? (power?.adapterW ?? 0) > 0.5
-        let batteryW = battery?.batteryWatts ?? 0
+        let plugged: Bool = battery?.externalConnected ?? ((power?.adapterW ?? 0) > 0.5)
+        let batteryW: Double = battery?.batteryWatts ?? 0
         Button(action: action) {
             VStack(alignment: .leading, spacing: 14) {
                 Label("Power", systemImage: "bolt.fill")
