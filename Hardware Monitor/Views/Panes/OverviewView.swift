@@ -103,7 +103,7 @@ private struct HeroCard: View {
             RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .fill(
                     LinearGradient(
-                        colors: [Palette.cpu.opacity(0.10), Palette.gpu.opacity(0.06), Color.primary.opacity(0.03)],
+                        colors: [Palette.cpu.opacity(0.12), Color.indigo.opacity(0.05), Color.primary.opacity(0.025)],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
