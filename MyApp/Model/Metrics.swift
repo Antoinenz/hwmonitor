@@ -190,7 +190,7 @@ nonisolated struct PowerSample: Sendable {
     var systemW: Double?
     /// Power coming in from the adapter (SMC PDTR).
     var adapterW: Double?
-    /// Battery charge (+) or discharge (−) power (SMC PPBR is unsigned; sign from battery current).
+    /// Battery charge (+) or discharge (−) power.
     var batteryW: Double?
 }
 
@@ -218,6 +218,8 @@ nonisolated struct Sample: Sendable {
     var power: PowerSample?
     var temps: TemperatureSample?
     var thermalState: ProcessInfo.ThermalState
+    /// Nil on Macs without a battery.
+    var battery: BatteryStatus?
 }
 
 nonisolated extension Array {

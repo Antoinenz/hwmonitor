@@ -42,14 +42,16 @@ actor MetricsCollector {
             gpus["0"] = first
         }
 
+        let battery = BatteryReader.read()
         let power = PowerSample(
             cpuW: report?.cpuW,
             gpuW: report?.gpuW,
             aneW: report?.aneW,
             dramW: report?.dramW,
-            systemW: smc.number("PSTR"),
-            adapterW: smc.number("PDTR"),
-            batteryW: smc.number("PPBR")
+            systemW: smc.number("PSTR") ?? battery?.systemLoad,
+            adapterW: battery.map { $0.externalConnected } == false ? 0 : smc.number("PDTR"),
+            // The SMC's battery rail is unsigned; voltage × current carries the direction.
+            batteryW: battery?.batteryWatts ?? smc.number("PPBR")
         )
 
         return Sample(
@@ -72,7 +74,8 @@ actor MetricsCollector {
             gpus: gpus,
             power: power,
             temps: temperature.read(),
-            thermalState: ProcessInfo.processInfo.thermalState
+            thermalState: ProcessInfo.processInfo.thermalState,
+            battery: battery
         )
     }
 
