@@ -1,4 +1,5 @@
 import AppKit
+import IOKit
 import Observation
 import SystemConfiguration
 
@@ -49,6 +50,7 @@ final class MetricsStore {
         info.osVersion = "macOS \(version.majorVersion).\(version.minorVersion)"
             + (version.patchVersion > 0 ? ".\(version.patchVersion)" : "")
         info.modelID = Sysctl.string("hw.model")
+        info.modelName = Self.productName()
         info.cpu = CPUReader.staticInfo()
         info.displays = Self.currentDisplays()
 
@@ -130,6 +132,16 @@ final class MetricsStore {
 
     private func updateReadiness() {
         if !isReady && inventoryLoaded && gpusLoaded { isReady = true }
+    }
+
+    /// Marketing model name from the device tree (Apple silicon).
+    private static func productName() -> String? {
+        let entry = IORegistryEntryFromPath(kIOMainPortDefault, "IODeviceTree:/product")
+        guard entry != 0 else { return nil }
+        defer { IOObjectRelease(entry) }
+        guard let data = IOKitUtil.property(entry, "product-name") as? Data else { return nil }
+        let name = String(decoding: data.prefix { $0 != 0 }, as: UTF8.self)
+        return name.isEmpty ? nil : name
     }
 
     private static func currentDisplays() -> [DisplayInfo] {

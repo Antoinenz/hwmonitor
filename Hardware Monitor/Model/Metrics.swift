@@ -100,6 +100,8 @@ nonisolated struct SystemInfo: Equatable, Sendable {
     var hostName: String = ""
     var osVersion: String = "macOS"
     var modelID: String?
+    /// Marketing name, e.g. "MacBook Air (M1, 2020)".
+    var modelName: String?
     var cpu = CPUStaticInfo(model: "Processor", logical: 0, physical: 0, sockets: 1)
     var memory = MemoryStaticInfo(total: Double(ProcessInfo.processInfo.physicalMemory))
     var disks: [DiskInfo] = []
