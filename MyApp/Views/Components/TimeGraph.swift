@@ -28,6 +28,8 @@ struct GraphSeries {
     var ramp: [Color]? = nil
     /// Short name shown in the hover inspector when a graph has several series.
     var label: String? = nil
+    /// Overrides the graph colour for this series.
+    var color: Color? = nil
 }
 
 /// Live, time-locked graph. Samples are placed by absolute time and the view
@@ -119,13 +121,14 @@ struct TimeGraph: View {
 
             let bottom = CGPoint(x: 0, y: height)
             let top = CGPoint(x: 0, y: 0)
-            let colors = item.ramp ?? [color]
+            let base = item.color ?? color
+            let colors = item.ramp ?? [base]
 
             if item.fill != .none {
                 let opacity = item.fill.opacity
                 let gradient: Gradient
                 if colors.count == 1 {
-                    gradient = Gradient(colors: [color.opacity(opacity.bottom), color.opacity(opacity.top)])
+                    gradient = Gradient(colors: [base.opacity(opacity.bottom), base.opacity(opacity.top)])
                 } else {
                     let last = Double(colors.count - 1)
                     gradient = Gradient(stops: colors.enumerated().map { i, c in
@@ -145,7 +148,7 @@ struct TimeGraph: View {
 
             let lineShading: GraphicsContext.Shading = colors.count > 1
                 ? .linearGradient(Gradient(colors: colors), startPoint: bottom, endPoint: top)
-                : .color(color)
+                : .color(base)
             // Anchor the dash pattern to absolute time so dashes travel with the data.
             let phase = item.dashed ? (CGFloat(start / window) * width).truncatingRemainder(dividingBy: 7) : 0
             let style = StrokeStyle(lineWidth: lineWidth, lineCap: .round, lineJoin: .round, dash: item.dashed ? [4, 3] : [], dashPhase: phase)
@@ -185,7 +188,7 @@ struct TimeGraph: View {
             let dot = Path(ellipseIn: CGRect(x: point.x - 3.5, y: point.y - 3.5, width: 7, height: 7))
             let dotColor = item.ramp.map { ramp in
                 ramp[Swift.min(ramp.count - 1, Int(Swift.min(Swift.max(v / maxValue, 0), 0.999) * Double(ramp.count)))]
-            } ?? color
+            } ?? item.color ?? color
             gc.fill(dot, with: .color(dotColor))
             gc.stroke(dot, with: .color(Color(nsColor: .windowBackgroundColor)), lineWidth: 1.5)
             let value = format(v)
