@@ -193,7 +193,8 @@ struct PerfSidebar: View {
             rows: 0,
             columns: 0,
             lineWidth: 1.25,
-            cornerRadius: 6
+            cornerRadius: 6,
+            adaptsToSelection: true
         )
     }
 

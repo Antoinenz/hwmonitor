@@ -52,8 +52,11 @@ struct TimeGraph: View {
     var inspectable = false
     /// Formats values in the hover readout.
     var format: (Double) -> String = { Fmt.pct($0) }
+    /// Switches to neutral white on a selected (accent-coloured) list row.
+    var adaptsToSelection = false
 
     @Environment(\.graphsPaused) private var paused
+    @Environment(\.backgroundProminence) private var prominence
     @State private var hover: CGPoint?
     @State private var scale = ScaleAnimator()
     @State private var width: CGFloat = 0
@@ -70,18 +73,20 @@ struct TimeGraph: View {
 
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: framed ? cornerRadius : 0, style: .continuous)
+        let emphasized = adaptsToSelection && prominence == .increased
+        let graph = emphasized ? neutralCopy : self
         TimelineView(.animation(minimumInterval: frameInterval, paused: paused)) { context in
             Canvas { gc, size in
                 let now = context.date.timeIntervalSince1970
-                draw(in: &gc, size: size, now: now - Self.displayDelay, max: scale.value(target: maxValue, at: now))
+                graph.draw(in: &gc, size: size, now: now - Self.displayDelay, max: scale.value(target: maxValue, at: now))
             }
         }
         .background {
-            if framed { shape.fill(Color.primary.opacity(0.025)) }
+            if framed { shape.fill(emphasized ? Color.white.opacity(0.16) : Color.primary.opacity(0.025)) }
         }
         .clipShape(shape)
         .overlay {
-            if framed { shape.strokeBorder(Color.primary.opacity(0.1)) }
+            if framed { shape.strokeBorder(emphasized ? Color.white.opacity(0.3) : Color.primary.opacity(0.1)) }
         }
         .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
         .onContinuousHover { phase in
@@ -92,6 +97,19 @@ struct TimeGraph: View {
             }
         }
         .accessibilityHidden(true)
+    }
+
+    /// White, single-colour version for drawing on an accent-coloured background.
+    private var neutralCopy: TimeGraph {
+        var copy = self
+        copy.color = .white
+        copy.series = series.map { item in
+            var item = item
+            item.ramp = nil
+            item.color = nil
+            return item
+        }
+        return copy
     }
 
     // MARK: Drawing
