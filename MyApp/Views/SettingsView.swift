@@ -21,31 +21,9 @@ struct SettingsView: View {
                     }
                 }
             }
-
-            Section {
-                LabeledContent("Status", value: elevationStatus)
-                if store.elevation != .on {
-                    Button("Grant Administrator Access…") { store.requestElevation() }
-                        .disabled(store.isRequestingElevation || store.elevation == .starting)
-                }
-            } header: {
-                Text("Administrator Access")
-            } footer: {
-                Text("CPU speed, power usage and GPU frequency are only available to administrators. Access lasts until System Monitor quits.")
-                    .foregroundStyle(.secondary)
-            }
         }
         .formStyle(.grouped)
         .frame(width: 440)
         .fixedSize(horizontal: false, vertical: true)
-    }
-
-    private var elevationStatus: String {
-        switch store.elevation {
-        case .off: "Not granted"
-        case .starting: "Starting…"
-        case .on: "Granted"
-        case .error(let message): message
-        }
     }
 }

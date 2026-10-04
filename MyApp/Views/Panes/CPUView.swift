@@ -25,8 +25,6 @@ struct CPUView: View {
             }
             .contextMenu { GraphMenuContent { options } }
 
-            ElevationCallout(features: "Speed and power")
-
             MetricStrip {
                 Metric(label: "Utilization", value: Fmt.pct(s?.cpu.total))
                 Metric(label: "Speed", value: Fmt.mhz(s?.cpu.speedMHz))
@@ -35,7 +33,12 @@ struct CPUView: View {
                     value: Fmt.temp(temps?.cpu),
                     legend: mode == .temperature ? Legend(color: Palette.temperature) : nil
                 )
-                Metric(label: "Power", value: Fmt.watts(power?.cpuW))
+                // M1 doesn't report CPU energy; fall back to whole-system draw.
+                if let cpuW = power?.cpuW {
+                    Metric(label: "Power", value: Fmt.watts(cpuW))
+                } else {
+                    Metric(label: "System power", value: Fmt.watts(power?.systemW))
+                }
             }
 
             DetailsGrid {
@@ -51,6 +54,9 @@ struct CPUView: View {
                     DetailRow("Up time", Fmt.uptime(s?.cpu.uptime)),
                 ])
                 DetailTable(title: "Processor", rows: processorRows(cpu))
+                DetailTable(title: "Clusters", rows: (s?.cpu.clusters ?? []).map { cluster in
+                    DetailRow(cluster.label, "\(Fmt.mhz(cluster.mhz)) · \(Fmt.pct(cluster.active)) active")
+                })
                 DetailTable(title: "Thermals", rows: [
                     temps?.performanceCores.map { DetailRow("Performance cores", Fmt.temp($0)) },
                     temps?.efficiencyCores.map { DetailRow("Efficiency cores", Fmt.temp($0)) },
@@ -58,7 +64,6 @@ struct CPUView: View {
                     temps?.soc.map { DetailRow("System on chip", Fmt.temp($0)) },
                     temps?.battery.map { DetailRow("Battery", Fmt.temp($0)) },
                     s.map { DetailRow("Thermal state", Fmt.thermalLabel($0.thermalState)) },
-                    power?.thermal.map { DetailRow("Thermal pressure", $0) },
                 ])
             }
 

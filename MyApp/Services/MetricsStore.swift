@@ -10,8 +10,6 @@ final class MetricsStore {
 
     private(set) var info = SystemInfo()
     private(set) var history: [Sample] = []
-    private(set) var elevation: ElevationState = .off
-    private(set) var isRequestingElevation = false
     /// Every process with its CPU and memory use, refreshed every 3 seconds.
     private(set) var processes: [ProcessUsage] = []
     /// True once disks, adapters and GPUs have been discovered, so panes can
@@ -81,20 +79,8 @@ final class MetricsStore {
         })
     }
 
-    func requestElevation() {
-        guard !isRequestingElevation else { return }
-        isRequestingElevation = true
-        let power = collector.power
-        Task {
-            await Task.detached { power.requestElevation() }.value
-            isRequestingElevation = false
-            elevation = power.state
-        }
-    }
-
     private func runSampling() async {
         while !Task.isCancelled {
-            // Align each sample to the next wall-clock second.
             // Target the next whole second strictly after the previous sample. If the
             // timer fires a little early we sleep again rather than taking a second
             // sample milliseconds later (which made per-core deltas flip 0 ↔ 100%).
@@ -114,8 +100,6 @@ final class MetricsStore {
             if history.count > Self.historyCapacity {
                 history.removeFirst(history.count - Self.historyCapacity)
             }
-            let state = collector.power.state
-            if state != elevation { elevation = state }
         }
     }
 

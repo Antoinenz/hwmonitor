@@ -2,13 +2,6 @@ import Foundation
 
 // MARK: - Static hardware info
 
-nonisolated enum ElevationState: Equatable, Sendable {
-    case off
-    case starting
-    case on
-    case error(String)
-}
-
 nonisolated struct CPUStaticInfo: Equatable, Sendable {
     var model: String
     var logical: Int
@@ -117,12 +110,30 @@ nonisolated struct SystemInfo: Equatable, Sendable {
 
 // MARK: - Per-second samples
 
+nonisolated struct CPUClusterSample: Sendable {
+    /// IOReport cluster name, e.g. ECPU, PCPU0.
+    var name: String
+    var mhz: Double
+    /// Active residency, 0–100.
+    var active: Double
+
+    var isEfficiency: Bool { name.hasPrefix("E") }
+
+    var label: String {
+        let base = isEfficiency ? "Efficiency" : "Performance"
+        let suffix = name.dropFirst(4)
+        return suffix.isEmpty ? base : "\(base) \(suffix)"
+    }
+}
+
 nonisolated struct CPUSample: Sendable {
     var total: Double
     var user: Double
     var sys: Double
     var cores: [Double]
+    /// Activity-weighted average frequency across clusters.
     var speedMHz: Double?
+    var clusters: [CPUClusterSample] = []
     var processes: Int?
     var threads: Int?
     var uptime: TimeInterval
@@ -161,21 +172,26 @@ nonisolated struct NetSample: Sendable {
 }
 
 nonisolated struct GPUSample: Sendable {
+    /// Utilisation, 0–100: frequency-weighted active residency on Apple
+    /// silicon (matches macmon/powermetrics), the driver's figure elsewhere.
     var util: Double
-    var renderer: Double?
-    var tiler: Double?
+    /// Plain active residency, 0–100 (Apple silicon only).
+    var active: Double?
+    var mhz: Double?
     var memUsed: Double?
-    var memAlloc: Double?
 }
 
 nonisolated struct PowerSample: Sendable {
     var cpuW: Double?
     var gpuW: Double?
     var aneW: Double?
-    var totalW: Double?
-    var gpuMHz: Double?
-    var cpuMHz: Double?
-    var thermal: String?
+    var dramW: Double?
+    /// Whole-system draw (SMC PSTR).
+    var systemW: Double?
+    /// Power coming in from the adapter (SMC PDTR).
+    var adapterW: Double?
+    /// Battery charge (+) or discharge (−) power (SMC PPBR is unsigned; sign from battery current).
+    var batteryW: Double?
 }
 
 nonisolated struct TemperatureSample: Sendable {

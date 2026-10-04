@@ -41,10 +41,7 @@ nonisolated enum GPUReader {
             let util = value("Device Utilization %") ?? value("GPU Activity(%)") ?? 0
             result[String(index)] = GPUSample(
                 util: min(100, util),
-                renderer: value("Renderer Utilization %"),
-                tiler: value("Tiler Utilization %"),
-                memUsed: value("In use system memory") ?? value("vramUsedBytes"),
-                memAlloc: value("Alloc system memory")
+                memUsed: value("In use system memory") ?? value("vramUsedBytes")
             )
         }
         return result

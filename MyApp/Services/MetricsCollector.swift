@@ -9,11 +9,14 @@ actor MetricsCollector {
     private var processes: Int?
     private var threads: Int?
 
+    private let ioReport = IOReportReader()
+    private let smc = SMCReader()
+
     nonisolated let temperature = TemperatureReader()
-    nonisolated let power = PowerReader()
 
     func start() {
         _ = cpu.read() // prime tick deltas
+        _ = ioReport.read(at: Date().timeIntervalSince1970)
         temperature.start()
         disks.discover()
         disks.refreshVolumes()
@@ -22,7 +25,33 @@ actor MetricsCollector {
 
     func sample(at t: TimeInterval) -> Sample {
         let reading = cpu.read()
-        let power = power.read()
+        let report = ioReport.read(at: t)
+
+        let clusters = (report?.clusters ?? []).map {
+            CPUClusterSample(name: $0.name, mhz: $0.mhz, active: $0.active)
+        }
+        let activity = clusters.reduce(0) { $0 + $1.active }
+        let speed = activity > 0 ? clusters.reduce(0) { $0 + $1.mhz * $1.active } / activity : nil
+
+        // Prefer IOReport's residency-based GPU figures (what powermetrics/macmon show).
+        var gpus = GPUReader.read()
+        if let report, let usage = report.gpuUsage, var first = gpus["0"] {
+            first.util = usage
+            first.active = report.gpuActive
+            first.mhz = report.gpuMHz
+            gpus["0"] = first
+        }
+
+        let power = PowerSample(
+            cpuW: report?.cpuW,
+            gpuW: report?.gpuW,
+            aneW: report?.aneW,
+            dramW: report?.dramW,
+            systemW: smc.number("PSTR"),
+            adapterW: smc.number("PDTR"),
+            batteryW: smc.number("PPBR")
+        )
+
         return Sample(
             t: t,
             cpu: CPUSample(
@@ -30,7 +59,8 @@ actor MetricsCollector {
                 user: reading.user,
                 sys: reading.sys,
                 cores: reading.cores,
-                speedMHz: power?.cpuMHz,
+                speedMHz: speed,
+                clusters: clusters,
                 processes: processes,
                 threads: threads,
                 uptime: ProcessInfo.processInfo.systemUptime,
@@ -39,7 +69,7 @@ actor MetricsCollector {
             mem: MemoryReader.read(),
             disks: disks.read(at: t),
             net: network.read(at: t),
-            gpus: GPUReader.read(),
+            gpus: gpus,
             power: power,
             temps: temperature.read(),
             thermalState: ProcessInfo.processInfo.thermalState

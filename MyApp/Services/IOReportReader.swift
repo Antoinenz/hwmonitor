@@ -197,8 +197,9 @@ nonisolated final class IOReportReader {
             }
         }
 
+        // On M1 the CPU energy counters never advance; a real CPU is never at 0 mJ.
         return Reading(
-            cpuW: sawEnergy ? cpuW : nil,
+            cpuW: sawEnergy && cpuW > 0 ? cpuW : nil,
             gpuW: sawEnergy ? gpuW : nil,
             aneW: sawEnergy ? aneW : nil,
             dramW: sawEnergy ? dramW : nil,

@@ -22,7 +22,7 @@ struct OverviewView: View {
                     noteColor: mem.flatMap { pressureColor($0.level) }
                 )
                 Metric(label: "CPU temperature", value: Fmt.temp(temps?.cpu))
-                if let watts = s?.power?.totalW {
+                if let watts = s?.power?.systemW {
                     Metric(label: "Power", value: Fmt.watts(watts))
                 } else {
                     Metric(label: "Up time", value: Fmt.uptime(s?.cpu.uptime), raw: true)
