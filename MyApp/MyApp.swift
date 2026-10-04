@@ -15,7 +15,7 @@ import SwiftUI
     }
 
     var body: some Scene {
-        Window("System Monitor", id: "main") {
+        Window("Hardware Monitor", id: "main") {
             ContentView()
                 .environment(store)
                 .onChange(of: appearance, initial: true) {

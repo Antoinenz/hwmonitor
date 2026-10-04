@@ -83,7 +83,7 @@ struct MenuBarPanel: View {
             Divider()
 
             HStack {
-                Button("Open System Monitor") {
+                Button("Open Hardware Monitor") {
                     openWindow(id: "main")
                     NSApp.activate()
                 }
@@ -98,7 +98,7 @@ struct MenuBarPanel: View {
                 } label: {
                     Image(systemName: "power")
                 }
-                .help("Quit System Monitor")
+                .help("Quit Hardware Monitor")
             }
             .buttonStyle(.borderless)
         }

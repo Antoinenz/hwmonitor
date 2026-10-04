@@ -24,7 +24,7 @@ nonisolated final class TemperatureReader: @unchecked Sendable {
     private static let temperatureField: Int32 = 15 << 16
 
     private let api: API?
-    private let queue = DispatchQueue(label: "SystemMonitor.temperature", qos: .utility)
+    private let queue = DispatchQueue(label: "HardwareMonitor.temperature", qos: .utility)
     private var timer: DispatchSourceTimer?
     private let lock = NSLock()
     private var latest: (time: Date, sensors: [(name: String, value: Double)])?
