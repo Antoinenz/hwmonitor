@@ -10,6 +10,7 @@ nonisolated enum PrefKey {
     static let showMenuBar = "showMenuBarExtra"
     static let compactMode = "compactMode"
     static let keepOnTop = "keepOnTop"
+    static let menuBarItems = "menuBarItems"
 }
 
 nonisolated enum TimeRange: String, CaseIterable, Identifiable {
@@ -121,4 +122,47 @@ nonisolated enum Palette {
     static let power = Color.teal
     /// Memory pressure blends green (bottom) → yellow → red (top) by height.
     static let pressureRamp: [Color] = [.green, .yellow, .red]
+}
+
+/// Values that can be shown in the menu bar, in display order.
+nonisolated enum MenuBarItem: String, CaseIterable, Identifiable {
+    case cpu, gpu, memory, cpuTemperature, power, battery, network, disk
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .cpu: "CPU usage"
+        case .gpu: "GPU usage"
+        case .memory: "Memory pressure"
+        case .cpuTemperature: "CPU temperature"
+        case .power: "System power"
+        case .battery: "Battery"
+        case .network: "Network throughput"
+        case .disk: "Disk activity"
+        }
+    }
+
+    /// Short caption drawn above the value.
+    var caption: String {
+        switch self {
+        case .cpu: "CPU"
+        case .gpu: "GPU"
+        case .memory: "MEM"
+        case .cpuTemperature: "TEMP"
+        case .power: "POWER"
+        case .battery: "BATT"
+        case .network: "NET"
+        case .disk: "DISK"
+        }
+    }
+
+    static func decode(_ raw: String) -> [MenuBarItem] {
+        let chosen = Set(raw.split(separator: ",").compactMap { MenuBarItem(rawValue: String($0)) })
+        return allCases.filter(chosen.contains)
+    }
+
+    static func encode(_ items: [MenuBarItem]) -> String {
+        items.map(\.rawValue).joined(separator: ",")
+    }
 }

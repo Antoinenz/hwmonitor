@@ -1,17 +1,106 @@
 import SwiftUI
 
-/// Live CPU percentage shown in the menu bar.
+/// The menu bar item: the chosen values drawn into fixed-width cells and
+/// rendered as one template image, so the status item never changes width
+/// (and never nudges the icons beside it) as numbers change.
 struct MenuBarLabel: View {
     @Environment(MetricsStore.self) private var store
+    @AppStorage(PrefKey.menuBarItems) private var rawItems = MenuBarItem.cpu.rawValue
 
     var body: some View {
-        let cpu = store.latest.map { Int($0.cpu.total.rounded()) }
-        HStack(spacing: 4) {
+        let items = MenuBarItem.decode(rawItems)
+        if items.isEmpty {
             Image(systemName: "gauge.with.dots.needle.33percent")
-            Text(cpu.map { "\($0)%" } ?? Fmt.dash)
-                .monospacedDigit()
+        } else if let image = render(items) {
+            Image(nsImage: image)
+                .accessibilityLabel(items.map { "\($0.title) \(value(for: $0).joined(separator: " "))" }.joined(separator: ", "))
         }
-        .accessibilityLabel("CPU \(cpu.map { "\($0) percent" } ?? "unknown")")
+    }
+
+    private func render(_ items: [MenuBarItem]) -> NSImage? {
+        let strip = HStack(spacing: 8) {
+            ForEach(items) { item in
+                MenuBarCell(item: item, lines: value(for: item))
+            }
+        }
+        .foregroundStyle(.black)
+        .frame(height: 22)
+        let renderer = ImageRenderer(content: strip)
+        renderer.scale = NSScreen.main?.backingScaleFactor ?? 2
+        guard let image = renderer.nsImage else { return nil }
+        image.isTemplate = true
+        return image
+    }
+
+    /// Display lines for an item (network shows send and receive on two rows).
+    private func value(for item: MenuBarItem) -> [String] {
+        let s = store.latest
+        switch item {
+        case .cpu: return [Fmt.pct(s?.cpu.total)]
+        case .gpu: return [Fmt.pct(s?.gpus["0"]?.util)]
+        case .memory: return [Fmt.pct(s?.mem.pressure)]
+        case .cpuTemperature: return [s?.temps?.cpu.map { "\(Int($0.rounded()))°" } ?? Fmt.dash]
+        case .power: return [Fmt.watts(s?.power?.systemW).replacingOccurrences(of: ".00", with: ".0")]
+        case .battery: return [s?.battery.map { "\(Int($0.percent))%" } ?? Fmt.dash]
+        case .network:
+            let send = s?.net.values.reduce(0) { $0 + $1.send }
+            let recv = s?.net.values.reduce(0) { $0 + $1.recv }
+            return ["↑ \(Fmt.rate(send))", "↓ \(Fmt.rate(recv))"]
+        case .disk:
+            let read = s?.disks.values.reduce(0) { $0 + $1.read }
+            let write = s?.disks.values.reduce(0) { $0 + $1.write }
+            return ["R \(Fmt.rate(read))", "W \(Fmt.rate(write))"]
+        }
+    }
+}
+
+/// One fixed-width menu bar cell: a tiny caption over the value, or two
+/// stacked rows for throughput items.
+private struct MenuBarCell: View {
+    var item: MenuBarItem
+    var lines: [String]
+
+    private static let valueFont = NSFont.monospacedDigitSystemFont(ofSize: 11, weight: .medium)
+    private static let rowFont = NSFont.monospacedDigitSystemFont(ofSize: 8.5, weight: .medium)
+    private static let captionFont = NSFont.systemFont(ofSize: 7.5, weight: .bold)
+
+    /// The widest text the item can ever show, which fixes the cell width.
+    private var template: [String] {
+        switch item {
+        case .cpu, .gpu, .memory, .battery: ["100%"]
+        case .cpuTemperature: ["100°"]
+        case .power: ["99.9 W"]
+        case .network, .disk: ["↑ 999 KB/s"]
+        }
+    }
+
+    private var width: CGFloat {
+        let font = lines.count > 1 ? Self.rowFont : Self.valueFont
+        let widest = template.map { ($0 as NSString).size(withAttributes: [.font: font]).width }.max() ?? 0
+        let caption = (item.caption as NSString).size(withAttributes: [.font: Self.captionFont]).width
+        return ceil(max(widest, lines.count > 1 ? 0 : caption)) + 1
+    }
+
+    var body: some View {
+        Group {
+            if lines.count > 1 {
+                VStack(alignment: .trailing, spacing: -2) {
+                    ForEach(lines, id: \.self) { line in
+                        Text(line).font(Font(Self.rowFont))
+                    }
+                }
+            } else {
+                VStack(alignment: .trailing, spacing: -1) {
+                    Text(item.caption)
+                        .font(Font(Self.captionFont))
+                        .opacity(0.7)
+                    Text(lines.first ?? Fmt.dash)
+                        .font(Font(Self.valueFont))
+                }
+            }
+        }
+        .lineLimit(1)
+        .frame(width: width, alignment: .trailing)
     }
 }
 
