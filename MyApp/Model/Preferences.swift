@@ -116,6 +116,7 @@ nonisolated enum Palette {
     static let network = Color.orange
     static let gpu = Color.pink
     static let temperature = Color.orange
+    static let power = Color.teal
     /// Memory pressure blends green (bottom) → yellow → red (top) by height.
     static let pressureRamp: [Color] = [.green, .yellow, .red]
 }

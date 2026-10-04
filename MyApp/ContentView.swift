@@ -38,6 +38,7 @@ struct ContentView: View {
         case .overview: OverviewView(selection: selection)
         case .cpu: CPUView()
         case .memory: MemoryView()
+        case .power: PowerView()
         case .disk(let id): DiskView(diskID: id)
         case .network(let id): NetworkView(networkID: id)
         case .gpu(let id): GPUView(gpuID: id)
@@ -48,7 +49,7 @@ struct ContentView: View {
     private func fallBackIfMissing(_ pane: Pane) {
         let info = store.info
         let exists = switch pane {
-        case .overview, .cpu, .memory: true
+        case .overview, .cpu, .memory, .power: true
         case .disk(let id): info.disks.contains { $0.id == id }
         case .network(let id): info.networks.contains { $0.id == id }
         case .gpu(let id): info.gpus.contains { $0.id == id }

@@ -4,6 +4,7 @@ nonisolated enum Pane: Hashable {
     case overview
     case cpu
     case memory
+    case power
     case disk(String)
     case network(String)
     case gpu(String)
@@ -14,6 +15,7 @@ nonisolated enum Pane: Hashable {
         case .overview: "overview"
         case .cpu: "cpu"
         case .memory: "memory"
+        case .power: "power"
         case .disk(let id): "disk:\(id)"
         case .network(let id): "network:\(id)"
         case .gpu(let id): "gpu:\(id)"
@@ -26,6 +28,7 @@ nonisolated enum Pane: Hashable {
         case ("overview", nil): self = .overview
         case ("cpu", nil): self = .cpu
         case ("memory", nil): self = .memory
+        case ("power", nil): self = .power
         case ("disk", let id?): self = .disk(id)
         case ("network", let id?): self = .network(id)
         case ("gpu", let id?): self = .gpu(id)
@@ -129,6 +132,15 @@ struct PerfSidebar: View {
                     }
                     .tag(Pane.gpu(gpu.id))
                 }
+
+                SidebarRow(title: "Power", subtitle: powerSummary(s)) {
+                    thumb(
+                        [GraphSeries(value: { $0.power?.systemW }, fill: .soft)],
+                        color: Palette.power,
+                        max: GraphMath.autoMax(store.history, window: Self.thumbWindow, floor: 10) { [$0.power?.systemW ?? 0] }
+                    )
+                }
+                .tag(Pane.power)
             }
 
             if !info.disks.isEmpty {
@@ -183,6 +195,13 @@ struct PerfSidebar: View {
             lineWidth: 1.25,
             cornerRadius: 6
         )
+    }
+
+    private func powerSummary(_ s: Sample?) -> String {
+        Fmt.join([
+            s?.power?.systemW.map { Fmt.watts($0) },
+            s?.battery.map { "\(Int($0.percent))%\($0.isCharging ? " ⚡︎" : "")" },
+        ])
     }
 
     private func memorySummary(_ mem: MemorySample?) -> String {
