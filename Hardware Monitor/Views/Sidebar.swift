@@ -74,6 +74,8 @@ enum SeriesLibrary {
 struct PerfSidebar: View {
     @Environment(MetricsStore.self) private var store
     @Binding var selection: Pane?
+    /// Double-clicking a row opens that pane in compact mode.
+    var onDoubleClick: (Pane) -> Void = { _ in }
     @AppStorage(PrefKey.memMode) private var memMode: MemoryGraphMode = .pressure
 
     private static let thumbWindow: TimeInterval = 60
@@ -96,6 +98,7 @@ struct PerfSidebar: View {
                     }
             }
             .tag(Pane.overview)
+            .simultaneousGesture(TapGesture(count: 2).onEnded { onDoubleClick(Pane.overview) })
 
             Section("System") {
                 SidebarRow(
@@ -109,6 +112,7 @@ struct PerfSidebar: View {
                     thumb(SeriesLibrary.cpu, color: Palette.cpu, max: 100)
                 }
                 .tag(Pane.cpu)
+                .simultaneousGesture(TapGesture(count: 2).onEnded { onDoubleClick(Pane.cpu) })
 
                 SidebarRow(title: "Memory", subtitle: memorySummary(s?.mem)) {
                     thumb(
@@ -118,6 +122,7 @@ struct PerfSidebar: View {
                     )
                 }
                 .tag(Pane.memory)
+                .simultaneousGesture(TapGesture(count: 2).onEnded { onDoubleClick(Pane.memory) })
 
                 ForEach(info.gpus) { gpu in
                     SidebarRow(
@@ -131,6 +136,7 @@ struct PerfSidebar: View {
                         thumb(SeriesLibrary.gpu(gpu.id), color: Palette.gpu, max: 100)
                     }
                     .tag(Pane.gpu(gpu.id))
+                    .simultaneousGesture(TapGesture(count: 2).onEnded { onDoubleClick(Pane.gpu(gpu.id)) })
                 }
 
                 SidebarRow(title: "Power", subtitle: powerSummary(s)) {
@@ -141,6 +147,7 @@ struct PerfSidebar: View {
                     )
                 }
                 .tag(Pane.power)
+                .simultaneousGesture(TapGesture(count: 2).onEnded { onDoubleClick(Pane.power) })
             }
 
             if !info.disks.isEmpty {
@@ -157,6 +164,7 @@ struct PerfSidebar: View {
                             thumb(SeriesLibrary.diskActive(disk.id), color: Palette.disk, max: 100)
                         }
                         .tag(Pane.disk(disk.id))
+                        .simultaneousGesture(TapGesture(count: 2).onEnded { onDoubleClick(Pane.disk(disk.id)) })
                     }
                 }
             }
@@ -175,6 +183,7 @@ struct PerfSidebar: View {
                             )
                         }
                         .tag(Pane.network(net.id))
+                        .simultaneousGesture(TapGesture(count: 2).onEnded { onDoubleClick(Pane.network(net.id)) })
                     }
                 }
             }

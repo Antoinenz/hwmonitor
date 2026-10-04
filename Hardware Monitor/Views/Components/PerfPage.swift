@@ -9,6 +9,7 @@ struct PerfPage<Options: View, Content: View>: View {
     var content: Content
 
     @AppStorage(PrefKey.range) private var range: TimeRange = .oneMinute
+    @AppStorage(PrefKey.compactMode) private var compact = false
 
     init(
         title: String,
@@ -35,6 +36,8 @@ struct PerfPage<Options: View, Content: View>: View {
         .navigationTitle(title)
         .navigationSubtitle(subtitle ?? "")
         .toolbar {
+            // Too wide for compact mode; the Graph Options menu still offers the range.
+            if !compact {
             ToolbarItem(placement: .primaryAction) {
                 Picker("Time Range", selection: $range) {
                     ForEach(TimeRange.allCases) { range in
@@ -44,6 +47,7 @@ struct PerfPage<Options: View, Content: View>: View {
                 .pickerStyle(.segmented)
                 .labelsHidden()
                 .help("Graph time range")
+            }
             }
             ToolbarItem(placement: .primaryAction) {
                 Menu {

@@ -8,6 +8,8 @@ nonisolated enum PrefKey {
     static let appearance = "appearance"
     static let selectedPane = "selectedPane"
     static let showMenuBar = "showMenuBarExtra"
+    static let compactMode = "compactMode"
+    static let keepOnTop = "keepOnTop"
 }
 
 nonisolated enum TimeRange: String, CaseIterable, Identifiable {

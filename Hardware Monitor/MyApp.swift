@@ -55,9 +55,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 private struct ViewCommands: Commands {
     var store: MetricsStore
     @AppStorage(PrefKey.range) private var range: TimeRange = .oneMinute
+    @AppStorage(PrefKey.compactMode) private var compact = false
+    @AppStorage(PrefKey.keepOnTop) private var keepOnTop = false
 
     var body: some Commands {
         CommandGroup(after: .sidebar) {
+            Toggle("Compact Mode", isOn: $compact)
+                .keyboardShortcut("c", modifiers: [.command, .option])
+            Toggle("Keep on Top", isOn: $keepOnTop)
+                .keyboardShortcut("t", modifiers: [.command, .option])
             Divider()
             Button(store.frozenAt == nil ? "Freeze Graphs" : "Resume Live Graphs") {
                 store.toggleFreeze()

@@ -4,6 +4,12 @@ struct ContentView: View {
     @Environment(MetricsStore.self) private var store
     @AppStorage(PrefKey.selectedPane) private var storedPane = Pane.overview.storageKey
     @State private var windowVisible = true
+    @AppStorage(PrefKey.compactMode) private var compact = false
+    @AppStorage(PrefKey.keepOnTop) private var keepOnTop = false
+    @State private var columns: NavigationSplitViewVisibility = .all
+    @State private var windowController = WindowController()
+    /// The split view reports its own visibility once after we change it; ignore that echo.
+    @State private var ignoreColumnChangesUntil = Date.distantPast
 
     private var selection: Binding<Pane?> {
         Binding {
@@ -15,8 +21,12 @@ struct ContentView: View {
 
     var body: some View {
         let current = Pane(storageKey: storedPane) ?? .overview
-        NavigationSplitView {
-            PerfSidebar(selection: selection)
+        NavigationSplitView(columnVisibility: $columns) {
+            PerfSidebar(selection: selection) { pane in
+                storedPane = pane.storageKey
+                compact = true
+            }
+            .toolbar(removing: compact ? .sidebarToggle : nil)
         } detail: {
             ZStack {
                 detail(for: current)
@@ -32,8 +42,47 @@ struct ContentView: View {
                 }
             }
             .animation(.spring(duration: 0.3), value: store.frozenAt)
+            .toolbar {
+                // In compact mode the pin takes the sidebar button's place.
+                if compact {
+                    ToolbarItemGroup(placement: .navigation) {
+                        Button {
+                            keepOnTop.toggle()
+                        } label: {
+                            Label(keepOnTop ? "Unpin Window" : "Keep on Top", systemImage: keepOnTop ? "pin.fill" : "pin")
+                        }
+                        .help(keepOnTop ? "Stop keeping this window on top" : "Keep this window above other apps")
+                        Button {
+                            compact = false
+                        } label: {
+                            Label("Exit Compact Mode", systemImage: "arrow.up.left.and.arrow.down.right")
+                        }
+                        .help("Show the sidebar again")
+                    }
+                }
+            }
         }
-        .frame(minWidth: 780, minHeight: 520)
+        .frame(minWidth: compact ? 380 : 780, minHeight: compact ? 280 : 520)
+        .background(WindowAccessor { window in
+            windowController.attach(window)
+            windowController.setKeepOnTop(keepOnTop)
+        })
+        .onChange(of: compact, initial: true) { _, isCompact in
+            ignoreColumnChangesUntil = Date().addingTimeInterval(1)
+            withAnimation(.smooth(duration: 0.3)) {
+                columns = isCompact ? .detailOnly : .all
+            }
+            windowController.setCompact(isCompact)
+        }
+        .onChange(of: keepOnTop) { _, onTop in windowController.setKeepOnTop(onTop) }
+        // Showing the sidebar any other way (⌃⌘S, toolbar) leaves compact mode.
+        .onChange(of: columns) { _, visibility in
+            guard Date() > ignoreColumnChangesUntil else {
+                if compact && visibility != .detailOnly { columns = .detailOnly }
+                return
+            }
+            if compact && visibility != .detailOnly { compact = false }
+        }
         .environment(\.graphsPaused, !windowVisible)
         .environment(\.frozenAt, store.frozenAt)
         .background(WindowVisibilityReader(isVisible: $windowVisible))
