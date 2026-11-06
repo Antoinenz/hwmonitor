@@ -78,7 +78,7 @@ Because it reads private system interfaces (IOReport, IOHIDEventSystem) and runs
 | [docs/features.md](docs/features.md) | Every pane, the menu bar, compact mode, settings |
 | [docs/architecture.md](docs/architecture.md) | Sampling pipeline, state, and view structure |
 | [docs/data-sources.md](docs/data-sources.md) | Where every number comes from |
-| [docs/development.md](docs/development.md) | Project layout, adding a metric, regenerating the icon |
+| [docs/development.md](docs/development.md) | Project layout, adding a metric, editing the icon |
 
 ## Project layout
 
@@ -90,9 +90,9 @@ Hardware Monitor/
 │   ├── Model/                 Sample types, formatting, preferences
 │   ├── Services/              Hardware readers and the sampling loop
 │   ├── Views/                 Panes, sidebar, menu bar panel, settings, components
-│   └── Assets.xcassets/       App icon and accent colour
+│   ├── AppIcon.icon/          App icon (Icon Composer document)
+│   └── Assets.xcassets/       Accent colour
 ├── docs/                      Documentation
-├── Tools/make-icon.swift      Regenerates the app icon
 └── Hardware Monitor.xcodeproj
 ```
 

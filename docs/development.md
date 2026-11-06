@@ -25,9 +25,9 @@
 │   │   ├── SettingsView.swift
 │   │   ├── Panes/                    Overview, CPU, Memory, GPU, Power, Disk, Network
 │   │   └── Components/               TimeGraph, PerfPage, Stats, TopProcesses, WindowAccessor
-│   └── Assets.xcassets/              AppIcon (generated) and AccentColor
+│   ├── AppIcon.icon/                 The app icon (Icon Composer document)
+│   └── Assets.xcassets/              AccentColor
 ├── Hardware Monitor.xcodeproj
-├── Tools/make-icon.swift             Icon generator
 └── docs/
 ```
 
@@ -74,15 +74,23 @@ There's no test target yet. Useful manual checks after a change:
 
 ## The app icon
 
-The icon is drawn in code so it can be tweaked without a design tool. To regenerate it:
+The icon is an Icon Composer document at `Hardware Monitor/AppIcon.icon`, so macOS applies the Liquid Glass material, lighting and masking itself, and renders the default, dark, clear and tinted appearances from one source. Xcode compiles it because `ASSETCATALOG_COMPILER_APPICON_NAME` is `AppIcon`, matching the file name. It also generates `AppIcon.icns` as a fallback.
+
+To edit it, double-click `AppIcon.icon` to open it in Icon Composer (Xcode → Open Developer Tool → Icon Composer). Follow Apple's rules for the layers:
+
+- Layers are flat, single-colour SVGs on a 1024 × 1024 canvas. Colour, opacity, glass and shadow are set in Icon Composer, not baked into the artwork.
+- Don't draw the rounded corners, because the system applies the mask. Shapes can bleed off the canvas.
+- Keep to one idea and a few filled shapes, and check it at 16 px.
+
+To preview from the command line:
 
 ```sh
-swift Tools/make-icon.swift
+"/Applications/Xcode.app/Contents/Applications/Icon Composer.app/Contents/Executables/ictool" \
+  "Hardware Monitor/AppIcon.icon" --export-image --output-file preview.png \
+  --platform macOS --rendition Default --width 1024 --height 1024 --scale 1
 ```
 
-This rewrites every size in `Hardware Monitor/Assets.xcassets/AppIcon.appiconset/` (16 to 512 pt at 1× and 2×, plus `Contents.json`) and a 1024 px preview at `docs/images/icon.png`.
-
-The design is a dark squircle holding a chip with a gradient rim and a live graph. The gradient uses the same blue → purple → pink → orange as the app's data colours. To change it, edit the colour constants at the top of the script or the `draw(in:)` function, where the layout is in a 1024 × 1024 design space. Commit the regenerated PNGs.
+`--rendition` takes `Default`, `Dark`, `ClearLight`, `ClearDark`, `TintedLight` or `TintedDark`. `docs/images/icon.png`, used by the README, is the `Default` rendition, so re-export it when the icon changes.
 
 ## Releasing
 
