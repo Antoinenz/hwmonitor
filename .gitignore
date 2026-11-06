@@ -1,6 +1,71 @@
+# ── macOS ───────────────────────────────────────────────
 .DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+.fseventsd
+.DocumentRevisions-V100
+.TemporaryItems
+Icon?
+*.icloud
+
+# ── Xcode: per-user state ───────────────────────────────
 xcuserdata/
 *.xcuserstate
+*.xcscmblueprint
+*.xccheckout
+*.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
+*.moved-aside
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# ── Xcode / Swift: build output ─────────────────────────
 DerivedData/
 build/
-*.xcscmblueprint
+.build/
+.swiftpm/
+Packages/
+*.xcarchive
+*.app
+*.pkg
+*.dmg
+*.zip
+timeline.xctimeline
+playground.xcworkspace
+
+# ── Signing and release secrets (never commit these) ────
+*.p12
+*.cer
+*.mobileprovision
+*.provisionprofile
+*.certSigningRequest
+*.keychain
+*.keychain-db
+ExportOptions.local.plist
+.env
+.env.*
+
+# ── Test and profiling output ───────────────────────────
+*.xcresult
+*.trace
+*.gcda
+*.gcno
+*.profraw
+*.profdata
+
+# ── Editors and tooling ─────────────────────────────────
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.claude/settings.local.json
+
+# ── Logs and scratch ────────────────────────────────────
+*.log
+tmp/
